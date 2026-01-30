@@ -1,5 +1,5 @@
-pandas
-pandas-ta
+pandas==2.2.2
 yfinance
 ccxt
 python-dotenv
+ta
