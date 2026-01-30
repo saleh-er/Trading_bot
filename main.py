@@ -3,72 +3,26 @@ from src.strategy import TradingStrategy
 from backtests.backtest import Backtester
 from src.visualizer import Visualizer 
 import os
+import pandas as pd
 
 def main():
-    # --- 1. SETTINGS ---
-    symbol = "BTC-USD"  # You can change this to "AAPL" or "ETH-USD"
-    interval = "1d"
-    period = "1y"
+    watchlist = ["BTC-USD", "ETH-USD", "^GSPC", "^IXIC", "NVDA", "AAPL"]
+    all_data = {}
+    strategy = TradingStrategy()
 
-    print(f"--- Starting Trading Bot Analysis for {symbol} ---")
+    for symbol in watchlist:
+        loader = DataLoader(symbol)
+        df = loader.fetch_data(period="6mo")
+        
+        if not df.empty:
+            df = strategy.add_indicators(df)
+            df = strategy.generate_signals(df)
+            all_data[symbol] = df
+            print(f"✅ Processed {symbol}")
 
-    # --- 2. FETCH DATA ---
-    # We initialize our DataLoader module
-    loader = DataLoader(symbol, interval=interval)
-    df = loader.fetch_data(period=period)
-
-    if df.empty:
-        print("❌ Error: No data found. Check your ticker symbol.")
-        return
-
-    # --- 3. APPLY STRATEGY ---
-    # We initialize our Strategy module
-    strategy = TradingStrategy(rsi_period=14, sma_fast=20, sma_slow=50)
-    
-    # Add indicators (RSI, SMA)
-    df = strategy.add_indicators(df)
-    
-    # Generate signals (Buy/Sell)
-    df = strategy.generate_signals(df)
-
-
-# --- NEW: BACKTESTING SECTION ---
-    print("\n--- Backtesting Results ---")
-    bt = Backtester(initial_capital=1000) # Start with $1000
-    final_val, ret, trade_count = bt.run(df)
-   
-    print(f"Initial Investment: $1000")
-    print(f"Final Portfolio Value: ${final_val:.2f}")
-    print(f"Total Return: {ret:.2f}%")
-    print(f"Total Trades Executed: {trade_count}")
-    
-    # Compare with "Buy and Hold" (Just buying and doing nothing)
-    buy_hold_ret = (((df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100).item()
-
-    print(f"Buy & Hold Return (Benchmark): {buy_hold_ret:.2f}%")
-
-
-# --- NEW: VISUALIZATION SECTION ---
-    print("\nGenerating Chart...")
-    Visualizer.plot_signals(df, "BTC-USD")
-
-    # --- 4. SHOW RESULTS ---
-    # Display the last 10 rows of relevant data
-    print("\nRecent Market Data & Signals:")
-    cols_to_show = ['Close', 'RSI', 'SMA_Fast', 'SMA_Slow', 'Signal']
-    print(df[cols_to_show].tail(10))
-
-    # Identify the current action
-    current_signal = df['Signal'].iloc[-1]
-    
-    print("\n" + "="*30)
-    if current_signal == 1:
-        print("🚀 CURRENT STATUS: BUY SIGNAL")
-    elif current_signal == -1:
-        print("🔻 CURRENT STATUS: SELL SIGNAL")
-    else:
-        print("😴 CURRENT STATUS: NEUTRAL (WAITING)")
-    print("="*30)
+    # Generate the multi-asset chart
+    if all_data:
+        Visualizer.plot_multi_assets(all_data)
 
 if __name__ == "__main__":
     main()
