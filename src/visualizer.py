@@ -114,4 +114,4 @@ class Visualizer:
             hovermode="x unified" # Shows all data points at a specific date on hover
         )
         
-        fig.show()
+        return fig
