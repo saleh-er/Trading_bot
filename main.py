@@ -4,11 +4,12 @@ from src.data_loader import DataLoader
 from src.strategy import TradingStrategy
 from src.visualizer import Visualizer 
 from backtests.backtest import Backtester
+from src.sentiment_analyzer import SentimentAnalyzer
 
-# Page Config - Sets the Bloomberg-style wide layout
+# Page Config
 st.set_page_config(page_title="Institutional Trading Dashboard", layout="wide", page_icon="📈")
 
-# Apply custom CSS for a cleaner "Dark Mode" look
+# Apply custom CSS
 st.markdown("""
     <style>
     .stMetric { background-color: #1e2130; padding: 15px; border-radius: 10px; border: 1px solid #2d2e32; }
@@ -29,44 +30,40 @@ def main():
     period = st.sidebar.selectbox("Analysis Period", ["6mo", "1y", "2y", "5y"], index=1)
     capital = st.sidebar.number_input("Simulator Capital ($)", value=10000)
 
+    # NEW: Risk Management Sidebar Controls
+    st.sidebar.divider()
+    st.sidebar.subheader("🛡️ Risk Parameters")
+    risk_pct = st.sidebar.slider("Risk Per Trade (%)", 0.1, 5.0, 1.0)
+    stop_loss_pct = st.sidebar.slider("Stop Loss (%)", 1.0, 10.0, 3.0)
+
     if not watchlist:
         st.warning("👈 Please select symbols in the sidebar to begin analysis.")
         return
 
     strategy = TradingStrategy()
     
-    # Create Navigation Tabs
     tab1, tab2 = st.tabs(["🔍 GLOBAL SCANNER", "📊 INDIVIDUAL DEEP DIVE"])
 
     with tab1:
         st.subheader("Real-Time Signals Dashboard")
-        
-        # Grid layout for signals
-        # We use a loop with columns to prevent the UI from becoming too vertically long
         grid_cols = st.columns(3) 
-        
         progress_bar = st.progress(0)
+        
         for i, symbol in enumerate(watchlist):
-            # Update progress
             progress_bar.progress((i + 1) / len(watchlist))
-            
-            # Fetch and process
             loader = DataLoader(symbol)
             df = loader.fetch_data(period=period)
             
-            if df.empty:
-                continue
+            if df.empty: continue
                 
             df = strategy.add_indicators(df)
             df = strategy.generate_signals(df)
             
             last_row = df.iloc[-1]
-            # Handle potential Series/Scalar issue from earlier
             price = last_row['Close'].item() if hasattr(last_row['Close'], 'item') else last_row['Close']
             signal = last_row['Signal'].item() if hasattr(last_row['Signal'], 'item') else last_row['Signal']
             rsi = last_row['RSI'].item() if hasattr(last_row['RSI'], 'item') else last_row['RSI']
 
-            # Place card in the grid
             with grid_cols[i % 3]:
                 with st.container():
                     if signal == 1:
@@ -75,42 +72,62 @@ def main():
                         st.error(f"**{symbol}** | 🔻 SELL SIGNAL")
                     else:
                         st.info(f"**{symbol}** | 😴 NEUTRAL")
-                    
                     st.metric("Price", f"${price:,.2f}", delta=f"RSI: {rsi:.1f}")
                     st.divider()
-        
         progress_bar.empty()
 
     with tab2:
-        st.subheader("Technical Performance Analysis")
+        st.subheader("Technical & Sentiment Deep Dive")
         selected_stock = st.selectbox("Select Asset to Inspect", watchlist)
         
-        # Load data for selected specific asset
         loader = DataLoader(selected_stock)
         df_detailed = loader.fetch_data(period=period)
         df_detailed = strategy.add_indicators(df_detailed)
         df_detailed = strategy.generate_signals(df_detailed)
 
-        # 1. Backtest Analytics
+        # --- NEW: SENTIMENT SECTION ---
+        mood_score = SentimentAnalyzer.get_sentiment(selected_stock)
+        
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            st.write("### Market Mood")
+            if mood_score > 0.05:
+                st.write(f"## 😊 Bullish ({mood_score:.2f})")
+            elif mood_score < -0.05:
+                st.write(f"## 😨 Bearish ({mood_score:.2f})")
+            else:
+                st.write(f"## 😐 Neutral ({mood_score:.2f})")
+        
+        with c2:
+            # --- NEW: RISK CALCULATOR ---
+            current_price = df_detailed['Close'].iloc[-1].item()
+            risk_amount = capital * (risk_pct / 100)
+            # Position Size = Risk Amount / Stop Loss Distance
+            pos_size = risk_amount / (stop_loss_pct / 100)
+            
+            st.write("### Risk Strategy")
+            st.info(f"💡 Based on your settings, risk **${risk_amount:,.2f}** to buy **${pos_size:,.2f}** of {selected_stock}.")
+
+        st.divider()
+
+        # Backtest Analytics
         bt = Backtester(initial_capital=capital)
         final_val, ret, trades = bt.run(df_detailed)
 
-        # Performance Metrics Header
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Final Portfolio", f"${final_val:,.2f}")
-        m2.metric("Net ROI", f"{ret:.2f}%", delta=f"{ret:.2f}%")
+        m2.metric("Net ROI", f"{ret:.2f}%")
         m3.metric("Total Trades", trades)
         
         # Benchmarking
-        first_p = df_detailed['Close'].iloc[0].item() if hasattr(df_detailed['Close'].iloc[0], 'item') else df_detailed['Close'].iloc[0]
-        last_p = df_detailed['Close'].iloc[-1].item() if hasattr(df_detailed['Close'].iloc[-1], 'item') else df_detailed['Close'].iloc[-1]
+        first_p = df_detailed['Close'].iloc[0].item()
+        last_p = df_detailed['Close'].iloc[-1].item()
         bh_ret = ((last_p - first_p) / first_p) * 100
         m4.metric("Buy & Hold ROI", f"{bh_ret:.2f}%")
 
-        # 2. The Professional Plotly Chart
-        st.markdown("---")
+        # The Professional Plotly Chart
         fig = Visualizer.plot_professional(df_detailed, selected_stock)
-        st.plotly_chart(fig, use_container_width=True, theme=None) # theme=None keeps your custom dark colors
+        st.plotly_chart(fig, use_container_width=True, theme=None)
 
 if __name__ == "__main__":
     main()
