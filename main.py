@@ -42,7 +42,8 @@ def main():
     print(f"Total Trades Executed: {trade_count}")
     
     # Compare with "Buy and Hold" (Just buying and doing nothing)
-    buy_hold_ret = ((df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100
+    buy_hold_ret = (((df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100).item()
+
     print(f"Buy & Hold Return (Benchmark): {buy_hold_ret:.2f}%")
 
 
