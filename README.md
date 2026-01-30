@@ -16,7 +16,7 @@ An advanced algorithmic trading dashboard built with **Python**, **Streamlit**, 
 Monitor your entire watchlist at a glance with real-time RSI indicators and signal status.
 
 <p align="center">
-  <img src="assets/pi2.png" width="90%" alt="Global Scanner View">
+  <img src="assets/pi1.png" width="90%" alt="Global Scanner View">
 </p>
 
 ### 📊 Individual Deep Dive
