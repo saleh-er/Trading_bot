@@ -3,3 +3,4 @@ yfinance
 ccxt
 python-dotenv
 ta
+streamlit
