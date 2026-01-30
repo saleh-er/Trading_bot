@@ -1,5 +1,6 @@
 from src.data_loader import DataLoader
 from src.strategy import TradingStrategy
+from backtests.backtest import Backtester
 import os
 
 def main():
@@ -28,6 +29,24 @@ def main():
     
     # Generate signals (Buy/Sell)
     df = strategy.generate_signals(df)
+
+
+# --- NEW: BACKTESTING SECTION ---
+    print("\n--- Backtesting Results ---")
+    bt = Backtester(initial_capital=1000) # Start with $1000
+    final_val, ret, trade_count = bt.run(df)
+   
+    print(f"Initial Investment: $1000")
+    print(f"Final Portfolio Value: ${final_val:.2f}")
+    print(f"Total Return: {ret:.2f}%")
+    print(f"Total Trades Executed: {trade_count}")
+    
+    # Compare with "Buy and Hold" (Just buying and doing nothing)
+    buy_hold_ret = ((df['Close'].iloc[-1] - df['Close'].iloc[0]) / df['Close'].iloc[0]) * 100
+    print(f"Buy & Hold Return (Benchmark): {buy_hold_ret:.2f}%")
+
+
+
 
     # --- 4. SHOW RESULTS ---
     # Display the last 10 rows of relevant data
