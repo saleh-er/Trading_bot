@@ -1,6 +1,7 @@
 from src.data_loader import DataLoader
 from src.strategy import TradingStrategy
 from backtests.backtest import Backtester
+from src.visualizer import Visualizer 
 import os
 
 def main():
@@ -47,7 +48,9 @@ def main():
     print(f"Buy & Hold Return (Benchmark): {buy_hold_ret:.2f}%")
 
 
-
+# --- NEW: VISUALIZATION SECTION ---
+    print("\nGenerating Chart...")
+    Visualizer.plot_signals(df, "BTC-USD")
 
     # --- 4. SHOW RESULTS ---
     # Display the last 10 rows of relevant data
