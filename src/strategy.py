@@ -42,28 +42,27 @@ class TradingStrategy:
         - BUY: RSI < 35 (Oversold), Price < BB_Low (Volatility limit), MACD turning Bullish
         - SELL: RSI > 65 (Overbought), Price > BB_High (Volatility limit), MACD turning Bearish
         """
+        # Initialize the signal column
         df['Signal'] = 0
+
+        # Extract underlying values to avoid index alignment issues
+        # This converts Pandas columns into raw Numpy arrays for high-speed comparison
+        close = df['Close'].values.flatten()
+        rsi = df['RSI'].values.flatten()
+        bb_low = df['BB_Low'].values.flatten()
+        bb_high = df['BB_High'].values.flatten()
+        macd_diff = df['MACD_Diff'].values.flatten()
+
+        # --- BUY SIGNAL (Triple Confirmation) ---
+        # Logic: RSI Oversold + Price at BB Floor + MACD turning up
+        buy_mask = (rsi < 35) & (close <= bb_low) & (macd_diff > 0)
         
-        # --- BUY SIGNAL ---
-        # Confirmation 1: RSI indicates oversold levels
-        # Confirmation 2: Price has pierced or touched the lower Bollinger Band
-        # Confirmation 3: MACD Histogram is positive (upward momentum)
-        df.loc[
-            (df['RSI'] < 35) & 
-            (df['Close'] <= df['BB_Low']) & 
-            (df['MACD_Diff'] > 0), 
-            'Signal'
-        ] = 1
+        # Now this will work because buy_mask is strictly 1D
+        df.loc[buy_mask, 'Signal'] = 1
         
-        # --- SELL SIGNAL ---
-        # Confirmation 1: RSI indicates overbought levels
-        # Confirmation 2: Price has pierced or touched the upper Bollinger Band
-        # Confirmation 3: MACD Histogram is negative (downward momentum)
-        df.loc[
-            (df['RSI'] > 65) & 
-            (df['Close'] >= df['BB_High']) & 
-            (df['MACD_Diff'] < 0), 
-            'Signal'
-        ] = -1
+        # --- SELL SIGNAL (Triple Confirmation) ---
+        # Logic: RSI Overbought + Price at BB Ceiling + MACD turning down
+        sell_mask = (rsi > 65) & (close >= bb_high) & (macd_diff < 0)
+        df.loc[sell_mask, 'Signal'] = -1
         
         return df
