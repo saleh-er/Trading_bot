@@ -14,7 +14,7 @@ st.markdown("""
     .stMetric { background-color: #1e2130; padding: 15px; border-radius: 10px; border: 1px solid #2d2e32; }
     [data-testid="stMetricValue"] { font-size: 24px; }
     </style>
-    """, unsafe_allow_index=True)
+    """, unsafe_allow_html=True)
 
 def main():
     st.title("🛡️ Institutional Multi-Asset Scanner")
