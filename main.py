@@ -148,22 +148,29 @@ def main():
             for symbol in watchlist:
                 loader = DataLoader(symbol)
                 df_corr = loader.fetch_data(period=period)
+                
                 if not df_corr.empty:
-                    corr_data[symbol] = df_corr['Close']
+                    # Fix: Ensure we extract the 'Close' column as a Series
+                    # We use .squeeze() to handle potential MultiIndex issues
+                    series = df_corr['Close'].squeeze()
+                    corr_data[symbol] = series
             
-            corr_df = pd.DataFrame(corr_data).corr()
-            
-            fig_corr, ax = plt.subplots(figsize=(10, 8))
-            sns.heatmap(corr_df, annot=True, cmap='RdYlGn', center=0, ax=ax)
-            ax.set_title("Portfolio Correlation Heatmap")
-            st.pyplot(fig_corr)
-            
-            high_corr = corr_df[corr_df > 0.8].stack().reset_index()
-            high_corr = high_corr[high_corr['level_0'] != high_corr['level_1']]
-            if not high_corr.empty:
-                st.warning("⚠️ High Correlation Detected! Diversification is limited.")
+            # Create the DataFrame safely
+            if corr_data:
+                try:
+                    corr_df = pd.DataFrame(corr_data).corr()
+                    
+                    fig_corr, ax = plt.subplots(figsize=(10, 8))
+                    sns.heatmap(corr_df, annot=True, cmap='RdYlGn', center=0, ax=ax)
+                    ax.set_title("Portfolio Correlation Heatmap")
+                    st.pyplot(fig_corr)
+                    
+                    # Risk Insight logic...
+                except ValueError as e:
+                    st.error(f"Correlation Error: Ensure all assets have data for the same period. {e}")
+            else:
+                st.error("No data available to calculate correlation.")
         else:
             st.info("Add more assets to your watchlist to see correlations.")
-
 if __name__ == "__main__":
     main()
