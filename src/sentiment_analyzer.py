@@ -4,18 +4,27 @@ import yfinance as yf
 class SentimentAnalyzer:
     @staticmethod
     def get_sentiment(symbol):
-        """Analyzes news headlines to determine market mood."""
+        """Analyzes news headlines safely using .get() to avoid KeyErrors."""
         ticker = yf.Ticker(symbol)
-        news = ticker.news
+        try:
+            news = ticker.news
+        except Exception:
+            return 0.0 # Return neutral if API fails
         
         if not news:
-            return 0.0 # Neutral if no news
+            return 0.0 
         
         scores = []
         for item in news:
-            analysis = TextBlob(item['title'])
-            scores.append(analysis.sentiment.polarity)
+            # Use .get('title') which returns None instead of crashing if 'title' is missing
+            title = item.get('title')
+            
+            if title:
+                analysis = TextBlob(title)
+                scores.append(analysis.sentiment.polarity)
         
-        # Calculate average sentiment
-        avg_sentiment = sum(scores) / len(scores)
-        return avg_sentiment
+        # Avoid division by zero if no valid titles were found
+        if not scores:
+            return 0.0
+            
+        return sum(scores) / len(scores)
