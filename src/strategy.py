@@ -10,8 +10,9 @@ class TradingStrategy:
 
     def add_indicators(self, df):
         """Adds technical indicators using the 'ta' library"""
-        # Close prices must be a Series
-        close_prices = df['Close']
+        # We use .squeeze() to turn a (N, 1) dataframe into a (N,) Series
+        # This fixes the "Data must be 1-dimensional" error
+        close_prices = df['Close'].squeeze()
         
         # Add RSI
         df['RSI'] = RSIIndicator(close=close_prices, window=self.rsi_period).rsi()
