@@ -9,23 +9,32 @@ class Backtester:
 
     def run(self, df):
         """Simulates trading based on the 'Signal' column"""
-        # We start tracking from the first row where we have indicators
         df = df.dropna().copy()
         
         for index, row in df.iterrows():
-            # BUY Logic: If signal is 1 and we are not already in a position
-            if row['Signal'] == 1 and self.position == 0:
-                self.position = self.balance / row['Close']
+            # Extract the actual value from the signal column
+            # We use .item() to turn a single-element Series into a scalar
+            try:
+                # If row['Signal'] is a Series, .item() gets the value. 
+                # If it's already a scalar, it works too.
+                signal = row['Signal'].item() if hasattr(row['Signal'], 'item') else row['Signal']
+                price = row['Close'].item() if hasattr(row['Close'], 'item') else row['Close']
+            except ValueError:
+                # Fallback if there are multiple values for some reason
+                signal = row['Signal'].iloc[0] if hasattr(row['Signal'], 'iloc') else row['Signal']
+                price = row['Close'].iloc[0] if hasattr(row['Close'], 'iloc') else row['Close']
+
+            # BUY Logic
+            if signal == 1 and self.position == 0:
+                self.position = self.balance / price
                 self.balance = 0
                 self.trades += 1
-                # print(f"BUY at {row['Close']:.2f} on {index}")
 
-            # SELL Logic: If signal is -1 and we hold a position
-            elif row['Signal'] == -1 and self.position > 0:
-                self.balance = self.position * row['Close']
+            # SELL Logic
+            elif signal == -1 and self.position > 0:
+                self.balance = self.position * price
                 self.position = 0
                 self.trades += 1
-                # print(f"SELL at {row['Close']:.2f} on {index}")
 
         # Final evaluation: If we are still holding, sell at the last price
         final_price = df['Close'].iloc[-1]
